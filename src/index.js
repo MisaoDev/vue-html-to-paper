@@ -8,20 +8,6 @@ function addStyles (win, styles) {
   });
 }
 
-function openWindow (url, name, props) {
-  let windowRef = null;
-  if (/*@cc_on!@*/false) { // for IE only
-    windowRef = window.open('', name, props);
-    windowRef.close();
-  }
-  windowRef = window.open(url, name, props);
-  if (!windowRef.opener) {
-    windowRef.opener = self;
-  }
-  windowRef.focus();
-  return windowRef;
-}
-  
 const VueHtmlToPaper = {
   install (Vue, options = {}) {
     Vue.prototype.$htmlToPaper = (el, localOptions, cb = () => true) => {
@@ -45,7 +31,7 @@ const VueHtmlToPaper = {
         if (localOptions.name) name = localOptions.name;
         if (localOptions.specs) specs = localOptions.specs;
         if (localOptions.replace) replace = localOptions.replace;
-        if (localOptions.styles) styles = localOptions.styles;
+        if (localOptions.styles) styles = [...styles, ...localOptions.styles]
         if (localOptions.autoClose === false) autoClose = localOptions.autoClose;
         if (localOptions.windowTitle) windowTitle = localOptions.windowTitle;
       }
@@ -60,7 +46,7 @@ const VueHtmlToPaper = {
       }
       
       const url = '';
-      const win = openWindow(url, name, specs);
+      const win = window.open(url, name, specs, replace);
 
       win.document.write(`
         <html>
@@ -76,15 +62,14 @@ const VueHtmlToPaper = {
       addStyles(win, styles);
       
       setTimeout(() => {
+        win.onafterprint = () => {
+          if (autoClose) win.close();
+          cb();
+        }
         win.focus();
         win.print();
-        console.warn('autoClose', autoClose);
-        if (autoClose) {
-          setTimeout(function () {win.close();}, 1);
-        }
-        cb();
       }, 1000);
-        
+      
       return true;
     };
   },
